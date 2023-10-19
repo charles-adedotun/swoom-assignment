@@ -46,8 +46,8 @@ jobs:
         docker tag swoom-assignment-app:latest $IMAGE_REPO:$IMAGE_TAG
         docker push $IMAGE_REPO:$IMAGE_TAG
 
-  deploy-network:
-    # needs: push-image-to-ecr
+  deploy-prep:
+    needs: push-image-to-ecr
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -87,9 +87,10 @@ jobs:
         name: terraform-plan-readable-output
         path: terraform/plan-readable-output.txt
 
-  apply-terraform:
-    needs: deploy-network
+  deploy-infra:
+    needs: deploy-prep
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event.workflow_run.conclusion == 'success'
     environment: 
       name: SwoomDeploy
     defaults:

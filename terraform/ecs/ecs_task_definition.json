@@ -1,0 +1,27 @@
+{
+    "family": "${prefix}ecs-task-definition",
+    "networkMode": "awsvpc",
+    "containerDefinitions": [
+      {
+        "name": "${prefix}container",
+        "image": "${image_url}",
+        "memory": 256,
+        "cpu": 256,
+        "essential": true,
+        "portMappings": [
+          {
+            "containerPort": 5001,
+            "hostPort": 5001
+          }
+        ],
+        "logConfiguration": {
+          "logDriver": "awslogs",
+          "options": {
+            "awslogs-group": "/aws/ecs/${prefix}log-group",
+            "awslogs-region": "us-east-1",
+            "awslogs-stream-prefix": "ecs"
+          }
+        }
+      }
+    ]
+}

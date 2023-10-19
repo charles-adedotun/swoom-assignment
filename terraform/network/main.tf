@@ -1,6 +1,8 @@
 # VPC
 resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_support   = true
+  enable_dns_hostnames = true
   tags = {
     Name = "${var.prefix}vpc"
   }
@@ -62,18 +64,9 @@ resource "aws_network_acl" "public" {
     rule_no    = 100
     action     = "allow"
     cidr_block = "0.0.0.0/0"
-    from_port  = 80
-    to_port    = 80
-    protocol   = "tcp"
-  }
-
-  ingress {
-    rule_no    = 110
-    action     = "allow"
-    cidr_block = "0.0.0.0/0"
-    from_port  = 443
-    to_port    = 443
-    protocol   = "tcp"
+    from_port  = 0
+    to_port    = 0
+    protocol   = "-1"
   }
 
   tags = {
@@ -107,6 +100,15 @@ resource "aws_network_acl" "private" {
     from_port  = 0
     to_port    = 0
     protocol   = "-1"
+  }
+
+  ingress {
+    rule_no    = 110
+    action     = "allow"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 1024
+    to_port    = 65535
+    protocol   = "tcp"
   }
 
   tags = {
