@@ -1,1 +1,22 @@
+# Terraform
+*.tfstate
+*.tfstate.*.backup
+*.tfstate.backup
+*.tfvars
+.terraform/
+.terraform.lock.hcl
+
+# AWS CLI
+*.aws/
+
+# Miscellaneous
+*.log
+*.bak
+*.swp
+*.backup
+*.DS_Store
+*.egg-info/
+*.dist-info/
+*.pyc
+__pycache__/
 .venv

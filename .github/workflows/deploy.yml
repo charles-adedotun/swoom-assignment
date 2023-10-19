@@ -3,14 +3,15 @@ name: Deploy Swoom Assignment App
 on:
   workflow_call:
 
+env:
+  REPO_NAME: swoom-assignment-app-repo
+  AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: "433826697239"
+
 jobs:
-  deploy:
+  push-image-to-ecr:
     runs-on: ubuntu-latest
     # if: github.ref == 'refs/heads/main' && github.event.workflow_run.conclusion == 'success'
-    env:
-      REPO_NAME: swoom-assignment-app-repo
-      AWS_REGION: us-east-1
-      AWS_ACCOUNT_ID: "433826697239"
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -44,3 +45,74 @@ jobs:
         IMAGE_REPO=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.REPO_NAME }}
         docker tag swoom-assignment-app:latest $IMAGE_REPO:$IMAGE_TAG
         docker push $IMAGE_REPO:$IMAGE_TAG
+
+  deploy-network:
+    # needs: push-image-to-ecr
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/swoom-assignment-actions-role
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+
+    - name: Terraform fmt
+      run: terraform fmt -check
+      continue-on-error: true
+
+    - name: Terraform Init
+      run: terraform init
+
+    - name: Terraform Validate
+      run: terraform validate -no-color
+    
+    - name: Terraform Plan (Readable Output)
+      run: terraform plan > plan-readable-output.txt
+
+    - name: Terraform Plan (Binary Output)
+      run: terraform plan -out=plan-binary-output.tfplan
+
+    - name: Upload Terraform Plan output as artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: terraform-plan-readable-output
+        path: terraform/plan-readable-output.txt
+
+  apply-terraform:
+    needs: deploy-network
+    runs-on: ubuntu-latest
+    environment: 
+      name: SwoomDeploy
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/swoom-assignment-actions-role
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+
+    - name: Terraform Init
+      run: terraform init
+
+    - name: Terraform Plan (Binary Output)
+      run: terraform plan -out=plan-output.tfplan
+
+    - name: Terraform Apply
+      run: terraform apply -auto-approve plan-output.tfplan
