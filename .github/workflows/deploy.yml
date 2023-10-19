@@ -5,6 +5,7 @@ on:
     workflows: ["CI for swoom-assignment-app"]
     types:
       - completed
+    workflow_dispatch:
 
 jobs:
   deploy:
