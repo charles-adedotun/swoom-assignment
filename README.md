@@ -1,5 +1,8 @@
 # Swoom Assigment Application Deployment
 
+## ALB Link
+Access the Application Load Balancer [here](http://swoom-assignment-alb-181915635.us-east-1.elb.amazonaws.com).
+
 ## Table of Contents
 1. Introduction
 2. Design and Architecture
