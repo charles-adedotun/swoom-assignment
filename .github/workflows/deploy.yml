@@ -1,0 +1,53 @@
+name: CD for swoom-assignment-app
+
+on:
+  workflow_run:
+    workflows: ["CI for swoom-assignment-app"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # if: github.ref == 'refs/heads/main' && github.event.workflow_run.conclusion == 'success'
+    env:
+      REPO_NAME: swoom-assignment-app-repo
+      AWS_REGION: us-east-1
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Download Docker image artifact
+      uses: actions/download-artifact@v2
+      with:
+        name: swoom-assignment-app-image
+
+    - name: Load Docker image from tar
+      run: docker load < swoom-assignment-app.tar
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Create ECR repository if it doesn't exist
+      run: |
+        aws ecr describe-repositories --repository-names $REPO_NAME || \
+        aws ecr create-repository --repository-name $REPO_NAME
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Extract AWS Account ID
+      id: extract-account
+      run: echo "AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
+
+    - name: Push Docker image to Amazon ECR
+      run: |
+        IMAGE_TAG=${{ github.run_number }}
+        IMAGE_REPO=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.REPO_NAME }}
+        docker tag swoom-assignment-app:latest $IMAGE_REPO:$IMAGE_TAG
+        docker push $IMAGE_REPO:$IMAGE_TAG
